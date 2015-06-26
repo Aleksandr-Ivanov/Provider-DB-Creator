@@ -1,0 +1,33 @@
+table.ver2 {
+	border-collapse : collapse;
+    border:2px solid black;
+	width:820px;
+    height:300px;
+    position:fixed;
+    margin-left:-410px; /* half of width */
+    margin-top:-150px;  /* half of height */
+    top:50%;
+    left:50%;
+}
+
+.ver2 th {
+    padding: 5px;
+    border:1px solid black;
+}
+
+.ver2 td {
+    padding:5px;
+    border:0px solid #ccc;
+    align : center;
+    /*font-size:auto;*/
+
+}
+
+input[type=submit] {
+    width: 175px;
+   /* height: 2em;*/
+}
+
+.bold {
+  font-weight:bold;
+}
