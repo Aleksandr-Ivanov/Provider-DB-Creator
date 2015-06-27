@@ -52,7 +52,7 @@ public class Servlet extends HttpServlet {
         String requestParamsValidation = checkAndSetParameters(request);
         
         String error = "Error: ";
-        String result = null;
+        StringBuilder resultBuilder = new StringBuilder();
         
         /*
          * if check returns "successful." then start controller else show 
@@ -67,20 +67,27 @@ public class Servlet extends HttpServlet {
                 
                 controller.setParameters(parameters);
                 controller.storeTrafficPerMinute();
-                result = "Last operation passed successfully!";
+                resultBuilder.append("Last operation passed successfully!");
             } catch (ClassNotFoundException | SQLException e) {
-                result = error + e;
+                resultBuilder.append(error);
+                resultBuilder.append(e);
             } catch (ParseException e) {
-                result = error + e + ". Can't parse date. "
-                         + "Format example: 13.01.2012 01:57";
+                resultBuilder.append(error);
+                resultBuilder.append(e);
+                resultBuilder.append(". Can't parse date. ");
+                resultBuilder.append("Format example: 13.01.2012 01:57");
             } catch (NumberFormatException e) {
-                result = error + e + ". Can't parse users quantity. "
-                         + "Users quantity should be an integer and > 0.";
+                resultBuilder.append(error);
+                resultBuilder.append(e);
+                resultBuilder.append(". Can't parse users quantity. Users ");
+                resultBuilder.append("quantity should be an integer and > 0.");
             }
         } else {
-            result = error + requestParamsValidation;
+            resultBuilder.append(error);
+            resultBuilder.append(requestParamsValidation);
         }
         
+        String result = resultBuilder.toString();
         /* 
          * received parameters and result is being set as request attributes to
          * be shown on view 
@@ -158,13 +165,8 @@ public class Servlet extends HttpServlet {
         return request;
     }
     
-    /**
+    /*
      * Forwards prepared request to view page 
-     * 
-     * @param request
-     * @param response
-     * @throws ServletException
-     * @throws IOException
      */
     private void forwardIt(
             HttpServletRequest request,

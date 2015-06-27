@@ -63,8 +63,16 @@ public class DBManager {
      */
     public DBManager(String hostName, String portName,
                       String dbName, String dbUserName, String dbPassword) {
-        this.dbLink = "jdbc:mysql://" + hostName + ":" + portName + "/"
-                      + dbName;
+        StringBuilder linkBuilder = new StringBuilder();
+        
+        linkBuilder.append("jdbc:mysql://");
+        linkBuilder.append(hostName);
+        linkBuilder.append(":");
+        linkBuilder.append(portName);
+        linkBuilder.append("/");
+        linkBuilder.append(dbName);
+        
+        this.dbLink = linkBuilder.toString();
         this.dbUserName = dbUserName;
         this.dbPassword = dbPassword;
     }
@@ -107,14 +115,17 @@ public class DBManager {
     private void insertUserTraffic(User user) 
             throws SQLException, ClassNotFoundException {
         int userId = getUserId(user);
+        StringBuilder queryBuilder = new StringBuilder();
         
-        String insertTrafficStmnt = "INSERT INTO TRAFFIC"
-                + "(MINUTE, LOADED_BYTES, USER_ID) " 
-                + "VALUES( ?, ?, ?)";
+        queryBuilder.append("INSERT INTO TRAFFIC(MINUTE, ");
+        queryBuilder.append("LOADED_BYTES, USER_ID) ");
+        queryBuilder.append("VALUES( ?, ?, ?);");
+        
+        String query = queryBuilder.toString();
         
         try (Connection dbConnection = getDBConnection(); 
                 PreparedStatement prepStmnt = 
-                        dbConnection.prepareStatement(insertTrafficStmnt);) {
+                        dbConnection.prepareStatement(query);) {
             
             Map<Date, Integer> userTraffic = user.getTraffic();
             
@@ -146,17 +157,25 @@ public class DBManager {
      */
     private int getUserId(User user) 
             throws SQLException, ClassNotFoundException {
-        String getUserIdQuery = "SELECT USER_ID "
-                + "FROM USERS "
-                + "WHERE FIRSTNAME = '" + user.getFirstName() + "' "
-                + "AND LASTNAME = '" + user.getLastName() + "' "
-                + "AND CITY = '" + user.getCity() + "' "
-                + "AND ADDRESS = '" + user.getAddress() + "';";
+        StringBuilder queryBuilder = new StringBuilder();
+        
+        queryBuilder.append("SELECT USER_ID FROM USERS ");
+        queryBuilder.append("WHERE FIRSTNAME = '");
+        queryBuilder.append(user.getFirstName());
+        queryBuilder.append("' AND LASTNAME = '");
+        queryBuilder.append(user.getLastName());
+        queryBuilder.append("' AND CITY = '");
+        queryBuilder.append(user.getCity());
+        queryBuilder.append("' AND ADDRESS = '");
+        queryBuilder.append(user.getAddress());
+        queryBuilder.append("';");
+        
+        String query = queryBuilder.toString();
          
         try (Connection dbConnection = getDBConnection(); 
                 Statement statement = dbConnection.createStatement();) {
      
-            ResultSet rs = statement.executeQuery(getUserIdQuery);
+            ResultSet rs = statement.executeQuery(query);
                 if (rs.next()) {
                     return rs.getInt("USER_ID");
                 } else {
@@ -180,19 +199,29 @@ public class DBManager {
     private void insertUser(User user) 
             throws SQLException, ClassNotFoundException {
         String userCreationTime = getSQLFormatTime(new Date());
+        StringBuilder queryBuilder = new StringBuilder();
         
-        String insertUserStmnt = "INSERT INTO USERS"
-                + "(FIRSTNAME, LASTNAME, CITY, ADDRESS, CREATED_TIME) "
-                + "VALUES('" + user.getFirstName() + "', " 
-                + "'" + user.getLastName() + "', " 
-                + "'" + user.getCity() + "', "  
-                + "'" + user.getAddress() + "', " 
-                + "'" + userCreationTime + "')";
+        queryBuilder.append("INSERT INTO USERS(");
+        queryBuilder.append("FIRSTNAME, LASTNAME, CITY, ");
+        queryBuilder.append("ADDRESS, CREATED_TIME) ");
+        queryBuilder.append("VALUES('");
+        queryBuilder.append(user.getFirstName());
+        queryBuilder.append("', '");
+        queryBuilder.append(user.getLastName());
+        queryBuilder.append("', '");
+        queryBuilder.append(user.getCity());
+        queryBuilder.append("', '");
+        queryBuilder.append(user.getAddress());
+        queryBuilder.append("', '");
+        queryBuilder.append(userCreationTime);
+        queryBuilder.append("');");
+        
+        String query = queryBuilder.toString();
         
         try (Connection dbConnection = getDBConnection(); 
                 Statement statement = dbConnection.createStatement();) {
             
-            statement.executeUpdate(insertUserStmnt);
+            statement.executeUpdate(query);
         }
     }
 
@@ -207,19 +236,23 @@ public class DBManager {
      */
     private void createUsersTable() 
             throws SQLException, ClassNotFoundException {
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS USERS("
-                + "USER_ID INT NOT NULL AUTO_INCREMENT, "
-                + "FIRSTNAME VARCHAR(20) NOT NULL, "
-                + "LASTNAME VARCHAR(20) NOT NULL, "
-                + "CITY VARCHAR(20) NOT NULL, "
-                + "ADDRESS VARCHAR(40) NOT NULL, "
-                + "CREATED_TIME DATETIME NOT NULL, " 
-                + "PRIMARY KEY (USER_ID)" + ")";
+        StringBuilder queryBuilder = new StringBuilder();
+        
+        queryBuilder.append("CREATE TABLE IF NOT EXISTS USERS(");
+        queryBuilder.append("USER_ID INT UNSIGNED NOT NULL AUTO_INCREMENT, ");
+        queryBuilder.append("FIRSTNAME VARCHAR(20) NOT NULL, ");
+        queryBuilder.append("LASTNAME VARCHAR(20) NOT NULL, ");
+        queryBuilder.append("CITY VARCHAR(20) NOT NULL, ");
+        queryBuilder.append("ADDRESS VARCHAR(40) NOT NULL, ");
+        queryBuilder.append("CREATED_TIME DATETIME NOT NULL, ");
+        queryBuilder.append("PRIMARY KEY (USER_ID)" + ");");
+        
+        String query = queryBuilder.toString();
      
         try (Connection dbConnection = getDBConnection(); 
                 Statement statement = dbConnection.createStatement();) {
      
-            statement.execute(createTableSQL);
+            statement.execute(query);
             isNotCreatedUsersTable = false;
         }
     }
@@ -236,18 +269,23 @@ public class DBManager {
      */
     private void createTrafficTable() 
             throws SQLException, ClassNotFoundException {
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS TRAFFIC("
-                + "RECORD_ID INT NOT NULL AUTO_INCREMENT, "
-                + "MINUTE DATETIME NOT NULL, "
-                + "LOADED_BYTES INT NOT NULL, "
-                + "USER_ID INT NOT NULL REFERENCES USERS (USER_ID), "
-                + "PRIMARY KEY (RECORD_ID)"
-                + ")";
+        StringBuilder queryBuilder = new StringBuilder();
+        
+        queryBuilder.append("CREATE TABLE IF NOT EXISTS TRAFFIC(");
+        queryBuilder.append("RECORD_ID INT UNSIGNED NOT NULL AUTO_INCREMENT, ");
+        queryBuilder.append("MINUTE DATETIME NOT NULL, ");
+        queryBuilder.append("LOADED_BYTES INT UNSIGNED NOT NULL, ");
+        queryBuilder.append("USER_ID INT UNSIGNED NOT NULL, ");
+        queryBuilder.append("PRIMARY KEY (RECORD_ID), ");
+        queryBuilder.append("FOREIGN KEY (USER_ID) ");
+        queryBuilder.append("REFERENCES USERS (USER_ID));");
+        
+        String query = queryBuilder.toString();
      
         try (Connection dbConnection = getDBConnection(); 
                 Statement statement = dbConnection.createStatement();) {
      
-            statement.execute(createTableSQL);
+            statement.execute(query);
             isNotCreatedTrafficTable = false;
         }
     }

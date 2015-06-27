@@ -89,7 +89,6 @@ public class Controller {
         
         this.startDate = getDateByString(startDateString);
         this.endDate = getDateByString(endDateString);
-        
         if (startDate.getTime() > endDate.getTime()) {
             throw new ParseException("start date goes after end date", 0);
         }
@@ -162,8 +161,14 @@ public class Controller {
      */
     private Date getDateByString(String dateString) throws ParseException {
         if (!dateString.matches("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}")) {
-            String message = "\"" + dateString + "\" "  
-                             + "date doesn't match the format";
+            StringBuilder messageBuilder = new StringBuilder();
+            
+            messageBuilder.append("\"");
+            messageBuilder.append(dateString);
+            messageBuilder.append("\" ");
+            messageBuilder.append("date doesn't match the format");
+            
+            String message = messageBuilder.toString();
             
             throw new ParseException(message, 0);
         }
