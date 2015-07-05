@@ -32,7 +32,7 @@ import java.util.Map;
  * 
  * @author Aleksandr Ivanov
  */
-public class DBManager {
+public class UserDao {
     private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
     private static final DateFormat sqlDateFormat =
             new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -52,7 +52,7 @@ public class DBManager {
     private boolean isNotCreatedTrafficTable = true;
 
     /**
-     * Creates new instance of DBManager and defines SQL connection
+     * Creates new instance of UserDao and defines SQL connection
      * parameters. Constructs URL to connect to MySQL by JDBC driver.
      * 
      * @param hostName host name to connect
@@ -61,8 +61,8 @@ public class DBManager {
      * @param dbUserName username to login
      * @param dbPassword password to login
      */
-    public DBManager(String hostName, String portName,
-                      String dbName, String dbUserName, String dbPassword) {
+    public UserDao(String hostName, String portName,
+                   String dbName, String dbUserName, String dbPassword) {
         StringBuilder linkBuilder = new StringBuilder();
         
         linkBuilder.append("jdbc:mysql://");
@@ -90,31 +90,42 @@ public class DBManager {
      */
     void storeUserTraffic(User user) 
             throws SQLException, ClassNotFoundException {
-        if (isNotCreatedUsersTable()) {
-            createUsersTable();
+        Connection connection = getConnection();
+        try {
+            connection.setTransactionIsolation(
+                    Connection.TRANSACTION_SERIALIZABLE);
+            connection.setAutoCommit(false);
+
+            if (isNotCreatedUsersTable()) {
+                createUsersTable(connection);
+            }
+
+            if (isNotCreatedTrafficTable()) {
+                createTrafficTable(connection);
+            }
+
+            insertUserTraffic(connection, user);
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.close();
         }
-        
-        if (isNotCreatedTrafficTable()) {
-            createTrafficTable();
-        }
-        
-        insertUserTraffic(user);
     }
 
     /**
      * Store users traffic Map through iteration entries and inserting
      * by prepare statement.
      * 
+     * @param connection for SQL manipulations usage
      * @param user defines whose traffic to store
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
-     * @throws ClassNotFoundException re-thrown from getConnection()
-     * Handling is implied to do in Servlet to show exception to 
-     * program user
      */
-    private void insertUserTraffic(User user) 
-            throws SQLException, ClassNotFoundException {
-        int userId = getUserId(user);
+    private void insertUserTraffic(Connection connection, User user) 
+            throws SQLException {
+        int userId = getUserId(connection, user);
         StringBuilder queryBuilder = new StringBuilder();
         
         queryBuilder.append("INSERT INTO TRAFFIC(MINUTE, ");
@@ -123,9 +134,7 @@ public class DBManager {
         
         String query = queryBuilder.toString();
         
-        try (Connection dbConnection = getDBConnection(); 
-                PreparedStatement prepStmnt = 
-                        dbConnection.prepareStatement(query);) {
+        try (PreparedStatement prepStmnt = connection.prepareStatement(query)) {
             
             Map<Date, Integer> userTraffic = user.getTraffic();
             
@@ -147,16 +156,14 @@ public class DBManager {
      * Get user ID from USERS table. If user not exists in table 
      * it gives the command to create.
      * 
+     * @param connection for SQL manipulations usage
      * @param user defines whose ID to get
      * @return user id in SQL schema USERS table
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
-     * @throws ClassNotFoundException re-thrown from getConnection()
-     * Handling is implied to do in Servlet to show exception to 
-     * program user
      */
-    private int getUserId(User user) 
-            throws SQLException, ClassNotFoundException {
+    private int getUserId(Connection connection, User user) 
+            throws SQLException {
         StringBuilder queryBuilder = new StringBuilder();
         
         queryBuilder.append("SELECT USER_ID FROM USERS ");
@@ -172,15 +179,14 @@ public class DBManager {
         
         String query = queryBuilder.toString();
          
-        try (Connection dbConnection = getDBConnection(); 
-                Statement statement = dbConnection.createStatement();) {
+        try (Statement statement = connection.createStatement()) {
      
             ResultSet rs = statement.executeQuery(query);
                 if (rs.next()) {
                     return rs.getInt("USER_ID");
                 } else {
-                    insertUser(user);
-                    return getUserId(user);
+                    insertUser(connection, user);
+                    return getUserId(connection, user);
                 }
         }
     }
@@ -189,15 +195,13 @@ public class DBManager {
      * Execute statement to insert new user into USERS table with 
      * registration details of received User.
      * 
+     * @param connection for SQL manipulations usage
      * @param user defines whose credentials to store.
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
-     * @throws ClassNotFoundException re-thrown from getConnection()
-     * Handling is implied to do in Servlet to show exception to 
-     * program user
      */
-    private void insertUser(User user) 
-            throws SQLException, ClassNotFoundException {
+    private void insertUser(Connection connection, User user) 
+            throws SQLException {
         String userCreationTime = getSQLFormatTime(new Date());
         StringBuilder queryBuilder = new StringBuilder();
         
@@ -218,24 +222,21 @@ public class DBManager {
         
         String query = queryBuilder.toString();
         
-        try (Connection dbConnection = getDBConnection(); 
-                Statement statement = dbConnection.createStatement();) {
+        try (Statement statement = connection.createStatement()) {
             
             statement.executeUpdate(query);
         }
     }
 
     /**
-     * Creates new USERS table in SQL schema with check if not exists
+     * Creates new USERS table in SQL schema with check 
+     * 'if not exists'
      * 
+     * @param connection for SQL manipulations usage
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
-     * @throws ClassNotFoundException re-thrown from getConnection()
-     * Handling is implied to do in Servlet to show exception to 
-     * program user
      */
-    private void createUsersTable() 
-            throws SQLException, ClassNotFoundException {
+    private void createUsersTable(Connection connection) throws SQLException {
         StringBuilder queryBuilder = new StringBuilder();
         
         queryBuilder.append("CREATE TABLE IF NOT EXISTS USERS(");
@@ -249,8 +250,7 @@ public class DBManager {
         
         String query = queryBuilder.toString();
      
-        try (Connection dbConnection = getDBConnection(); 
-                Statement statement = dbConnection.createStatement();) {
+        try (Statement statement = connection.createStatement()) {
      
             statement.execute(query);
             isNotCreatedUsersTable = false;
@@ -258,17 +258,14 @@ public class DBManager {
     }
 
     /**
-     * Creates new TRAFFIC table in SQL schema with check if not 
-     * exists
+     * Creates new TRAFFIC table in SQL schema with check 
+     * 'if not exists'
      * 
+     * @param connection for SQL manipulations usage
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
-     * @throws ClassNotFoundException re-thrown from getConnection()
-     * Handling is implied to do in Servlet to show exception to 
-     * program user
      */
-    private void createTrafficTable() 
-            throws SQLException, ClassNotFoundException {
+    private void createTrafficTable(Connection connection) throws SQLException {
         StringBuilder queryBuilder = new StringBuilder();
         
         queryBuilder.append("CREATE TABLE IF NOT EXISTS TRAFFIC(");
@@ -282,8 +279,7 @@ public class DBManager {
         
         String query = queryBuilder.toString();
      
-        try (Connection dbConnection = getDBConnection(); 
-                Statement statement = dbConnection.createStatement();) {
+        try (Statement statement = connection.createStatement()) {
      
             statement.execute(query);
             isNotCreatedTrafficTable = false;
@@ -292,14 +288,14 @@ public class DBManager {
 
     /**
      * Creates new connection to schema with current instance 
-     * DBManager credentials
+     * UserDao credentials
      * 
      * @throws SQLException handling is implied to do in Servlet 
      * to show exception to program user.
      * @throws ClassNotFoundException handling is implied to do in 
      * Servlet to show exception to program user
      */
-    private Connection getDBConnection() 
+    private Connection getConnection() 
             throws SQLException, ClassNotFoundException {
         Class.forName(DB_DRIVER);
         return DriverManager.getConnection(dbLink, dbUserName, dbPassword);
@@ -308,7 +304,7 @@ public class DBManager {
     /**
      * Returns String with database readable date
      * 
-     * @param date
+     * @param date is given Date object
      * @return String with time in database accepted format
      */
     private String getSQLFormatTime(Date date) {

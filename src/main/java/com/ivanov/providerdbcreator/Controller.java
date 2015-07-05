@@ -16,7 +16,7 @@ import java.util.TreeSet;
  * Servlet. String parameters are defined in view page and validated by
  * null and emptiness check in Servlet. This class convert parameters
  * to workable types and check transformed data. It creates instances
- * of DBManager, Users and Date type time points to work with.
+ * of UserDao, Users and Date type time points to work with.
  * 
  * @author Aleksandr Ivanov
  */
@@ -84,7 +84,7 @@ public class Controller {
             throw new NumberFormatException("users quantity is less than 1");
         }
 
-        //forbid non-strict adherence to the SimpleDateFormat
+        //forbid non-strict adherence to the SimpleDateFormat pattern
         viewDateFormat.setLenient(false);       
         
         this.startDate = getDateByString(startDateString);
@@ -95,7 +95,7 @@ public class Controller {
     }
 
     /**
-     * Creates DBManager instance to store data. Divides time line
+     * Creates UserDao instance to store data. Divides time line
      * between start and end dates to minutes. Creates previously 
      * set users quantity instances and load users traffic to time
      * points (minutes).
@@ -108,14 +108,14 @@ public class Controller {
      */
     void storeTrafficPerMinute()
             throws ClassNotFoundException, SQLException {
-        DBManager dbManager = new DBManager(hostName, portName,
+        UserDao userDao = new UserDao(hostName, portName,
                 dbName, dbUserName, dbPassword);
         Set<Date> intervalByMinutes = getTimePoints();
         List<User> users = getUsersList(usersQuantity);
         
         for (User user : users) {
             user.loadTraffic(intervalByMinutes);
-            dbManager.storeUserTraffic(user);
+            userDao.storeUserTraffic(user);
         }
     }
 

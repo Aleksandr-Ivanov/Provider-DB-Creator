@@ -30,6 +30,10 @@ import javax.servlet.http.HttpServletResponse;
 @WebServlet("/main") 
 public class Servlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
+    private static final String USERS_PARSE_ERROR =
+            ". Wrong users quantity. It should be an integer and > 0.";
+    private static final String DATE_PARSE_ERROR =
+            ". Wrong date. Format example: 13.01.2012 01:57";
     
     /** 
      * Main functions of method is to get parameters from view page,
@@ -49,18 +53,18 @@ public class Servlet extends HttpServlet {
             throws ServletException, IOException {
         
         /* Provides String validation and parameters setting */
-        String requestParamsValidation = checkAndSetParameters(request);
+        String requestParametersValidation = checkParameters(request);
         
         String error = "Error: ";
         StringBuilder resultBuilder = new StringBuilder();
         
         /*
-         * if check returns "successful." then start controller else show 
+         * If check returns "successful" then start controller else show 
          * validation error as result
          * 
          * exceptions are handling to show on view as result
          */
-        if ("succesful.".equals(requestParamsValidation)) {
+        if ("succesful".equals(requestParametersValidation)) {
             try {
                 Controller controller = Controller.getInstance();
                 Map<String, String[]> parameters = request.getParameterMap();
@@ -74,30 +78,28 @@ public class Servlet extends HttpServlet {
             } catch (ParseException e) {
                 resultBuilder.append(error);
                 resultBuilder.append(e);
-                resultBuilder.append(". Can't parse date. ");
-                resultBuilder.append("Format example: 13.01.2012 01:57");
+                resultBuilder.append(DATE_PARSE_ERROR);
             } catch (NumberFormatException e) {
                 resultBuilder.append(error);
                 resultBuilder.append(e);
-                resultBuilder.append(". Can't parse users quantity. Users ");
-                resultBuilder.append("quantity should be an integer and > 0.");
+                resultBuilder.append(USERS_PARSE_ERROR);
             }
         } else {
             resultBuilder.append(error);
-            resultBuilder.append(requestParamsValidation);
+            resultBuilder.append(requestParametersValidation);
         }
         
         String result = resultBuilder.toString();
         /* 
-         * received parameters and result is being set as request attributes to
+         * Received parameters and result is being set as request attributes to
          * be shown on view 
          */
-        request = setRequestAttributes(request, result);
+        setRequestAttributes(request, result);
         forwardIt(request, response);
     }
     
     /**
-     * parameters Map is filling by Map which represents 
+     * Parameters Map is filling by Map which represents 
      * HttpServletRequest parameters. First element in parameters 
      * values arrays is taken because it is known that view page send
      * request with only one value per parameter.
@@ -105,7 +107,7 @@ public class Servlet extends HttpServlet {
      * @param request provides parameters Map
      * @return String of validation result
      */
-    private String checkAndSetParameters(HttpServletRequest request) {
+    private String checkParameters(HttpServletRequest request) {
         String usersQuantityStr = request.getParameter("usersQuantity");
         String startDate = request.getParameter("startDate");
         String endDate = request.getParameter("endDate");
@@ -115,7 +117,7 @@ public class Servlet extends HttpServlet {
         String dbUserName = request.getParameter("dbUserName");
         String dbPassword = request.getParameter("dbPassword");
         
-        if (usersQuantityStr == null || usersQuantityStr.isEmpty()){
+        if (usersQuantityStr == null || usersQuantityStr.isEmpty()) {
             return "users quantity is empty.";
         } else if (startDate == null || startDate.isEmpty()) {
             return "start date is empty.";
@@ -132,7 +134,7 @@ public class Servlet extends HttpServlet {
         } else if (dbPassword == null || dbPassword.isEmpty()) {
             return "DB password is empty.";
         } else {
-            return "succesful.";
+            return "succesful";
         }
     }
     
